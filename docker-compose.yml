@@ -1,0 +1,57 @@
+version: "2"
+
+services:
+  wedi-server-dev:
+    build:
+      context: ./src
+      dockerfile: ./Dockerfile
+      target: development
+    image: wedi-app-server-image-dev
+    container_name: wedi-app-server-container-dev
+    profiles:
+      - dev
+    ports:
+      - 8001:8001
+    # environment:
+    #   - PORT=${PORT}
+    env_file:
+      - ./.env
+    depends_on:
+      - wedi-postgres-db
+    links:
+      -  wedi-postgres-db
+    volumes:
+      - ./src/app:/app
+      - ./src/logs:/var/logs
+      - ./static:/static
+
+  wedi-postgres-db:
+    container_name:  wedi-postgres-db
+    image: postgres:12.1-alpine
+    profiles:
+      - prod
+      - dev
+    restart: always
+    ports:
+      - "5454:5432"
+    env_file:
+      - ./.env
+
+  wedi-minio:
+    image: minio/minio
+    container_name: wedi-minio
+    profiles:
+      - dev
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - ./data/minio:/data
+    environment:
+      MINIO_ROOT_USER: master123123
+      MINIO_ROOT_PASSWORD: master123123
+    command: server --console-address ":9001" /data
+
+volumes:
+   wedi-postgres-db:
+

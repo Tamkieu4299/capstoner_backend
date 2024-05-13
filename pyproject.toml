@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "voiads-app-server"
+version = "0.0.0"
+description = "Voiads project"
+readme = "README.md"
+authors = ["Tam Kieu <tamkieu4299@gmail.com>"]
+packages = [{include = "zone_1_backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 79
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
