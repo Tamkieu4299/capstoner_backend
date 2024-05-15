@@ -10,7 +10,7 @@ class StudentAnswer(BaseModel):
     answer = Column(String, nullable=False)
     assignment_id = Column(Integer, ForeignKey('assignments.id'), nullable=True)
     question_id = Column(Integer, ForeignKey('questions.id'), nullable=True)
-
+    result = Column(String, nullable=True)
     created_by = Column(
         Integer,
         ForeignKey(

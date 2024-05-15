@@ -30,7 +30,7 @@ async def register_assignment(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    assignment_data_dict = assignment_data.dict()
+    assignment_data_dict = assignment_data
     assignment_data_dict["created_by"] = current_user["user"].id
     new_assignment = await assignment_crud.create(assignment_data_dict, db)
     if new_assignment is None:

@@ -2,12 +2,11 @@ import json
 
 from pydantic import BaseModel
 
-class QuestionRegisterSchema(BaseModel):
-    standard_answer: str = None
-    instruction: str
-    marking_criteria: str
+class StudentAnswerRegisterSchema(BaseModel):
+    answer: str
     assignment_id: int
-    
+    question_id: int
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate_to_json
@@ -18,12 +17,11 @@ class QuestionRegisterSchema(BaseModel):
             return cls(**json.loads(value))
         return value
 
-class QuestionResponseSchema(BaseModel):
+class StudentAnswerResponseSchema(BaseModel):
     id: int
-    standard_answer: str = None
-    instruction: str
-    marking_criteria: str
+    answer: str
     assignment_id: int
+    question_id: int
 
     class Config:
         orm_mode = True
