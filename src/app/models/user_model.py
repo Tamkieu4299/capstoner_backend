@@ -17,15 +17,6 @@ class User(BaseModel):
     email = Column(String, nullable=True)
     address = Column(String, nullable=True)
     avatar = Column(String, nullable=True)
-    vendor_id = Column(
-        Integer,
-        ForeignKey(
-            "vendors.id",
-            onupdate="RESTRICT",
-            ondelete="RESTRICT",
-        ),
-    )
-    vendor = relationship("Vendor", backref="own_by_vendor", foreign_keys=[vendor_id])
     
     class Config:
         orm_mode = True

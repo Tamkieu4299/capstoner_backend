@@ -66,5 +66,6 @@ async def auto_grader(
 
     sa_dict = student_answer_data.__dict__
     sa_dict["result"] = completion.choices[0].message.content
+    sa_dict["answer"] = url
     new_sa = await sa_crud.create(sa_dict, db)
     return new_sa

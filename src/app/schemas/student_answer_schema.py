@@ -3,7 +3,6 @@ import json
 from pydantic import BaseModel
 
 class StudentAnswerRegisterSchema(BaseModel):
-    answer: str
     assignment_id: int
     question_id: int
 
