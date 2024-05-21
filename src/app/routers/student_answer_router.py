@@ -16,7 +16,9 @@ from ..utils import s3_driver
 from openai import AzureOpenAI
 from ..secret import get_current_active_user
 from app.crud.question_crud import CRUDQuestion
-import io
+from io import BytesIO
+import zipfile
+
 llm = AzureOpenAI(
     azure_endpoint="https://autograding-testing.openai.azure.com/",
     api_key="43a6c04255634b67803c38900d403bc0",
@@ -37,35 +39,45 @@ async def auto_grader(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    initial_prompt = "You are a teacher assistant who help to grade student code assesment."
-    url = s3_driver.upload(file = file, dest_dir = "answer", protocol="")
+    initial_prompt = "You are a teacher assistant who helps to grade student code assessment."
     q = question_crud.read(student_answer_data.question_id, db)
+    file_bytes = await file.read()
+    zip_file = BytesIO(file_bytes)
+    results = []
+    
+    if zipfile.is_zipfile(zip_file):
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            for file_name in zip_ref.namelist():
+                with zip_ref.open(file_name) as extracted_file:
+                    file_data = extracted_file.read()
+                    student_answer = file_data.decode('utf-8')
+                    prompt = " ".join(
+                        [initial_prompt, q.instruction, student_answer, q.marking_criteria]
+                    )
+                    messages = [
+                        {
+                            "role": "system",
+                            "content": "You are a teacher assistant who help to grade student code assesment.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ]
+                    completion = llm.chat.completions.create(
+                        model="AzureCodeGrader",
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=800,
+                        top_p=0.95,
+                        frequency_penalty=0,
+                        presence_penalty=0,
+                        stop=None,
+                    )
+                    sa_dict = student_answer_data.__dict__
+                    sa_dict["result"] = completion.choices[0].message.content
+                    sa_dict["answer"] = student_answer
+                    new_sa = await sa_crud.create(sa_dict, db)
+                    results.append(completion)
+    # url = s3_driver.upload(file=file_data, dest_dir="answer", protocol="")
+    # print(f"Uploaded {file_name} to S3 bucket with URL: {url}")
+    # student_answer = s3_driver.get_file(url)
 
-    student_answer = s3_driver.get_file(url)
-    prompt = " ".join(
-        [initial_prompt, q.instruction, student_answer, q.marking_criteria]
-    )
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a teacher assistant who help to grade student code assesment.",
-        },
-        {"role": "user", "content": prompt},
-    ]
-
-    completion = llm.chat.completions.create(
-        model="AzureCodeGrader",
-        messages=messages,
-        temperature=0.7,
-        max_tokens=800,
-        top_p=0.95,
-        frequency_penalty=0,
-        presence_penalty=0,
-        stop=None,
-    )
-
-    sa_dict = student_answer_data.__dict__
-    sa_dict["result"] = completion.choices[0].message.content
-    sa_dict["answer"] = url
-    new_sa = await sa_crud.create(sa_dict, db)
-    return new_sa
+    return results
