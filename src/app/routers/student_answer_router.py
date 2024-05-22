@@ -12,7 +12,7 @@ from app.schemas.student_answer_schema import (
     StudentAnswerResponseSchema,
 )
 from sqlalchemy.orm import Session
-from ..utils import s3_driver
+from ..utils import s3_driver, common
 from openai import AzureOpenAI
 from ..secret import get_current_active_user
 from app.crud.question_crud import CRUDQuestion
@@ -40,7 +40,6 @@ async def auto_grader(
     current_user=Depends(get_current_active_user),
 ):
     initial_prompt = "You are a teacher assistant who helps to grade student code assessment."
-    q = question_crud.read(student_answer_data.question_id, db)
     file_bytes = await file.read()
     zip_file = BytesIO(file_bytes)
     results = []
@@ -49,6 +48,11 @@ async def auto_grader(
         with zipfile.ZipFile(zip_file, 'r') as zip_ref:
             for file_name in zip_ref.namelist():
                 with zip_ref.open(file_name) as extracted_file:
+                    student_name, question_number = common.extract_student_info(file_name)
+                    q = question_crud.read_by_title(student_answer_data.assignment_id, question_number, db)
+                    if not q:
+                        print("found no question")
+                        continue
                     file_data = extracted_file.read()
                     student_answer = file_data.decode('utf-8')
                     prompt = " ".join(
@@ -69,11 +73,13 @@ async def auto_grader(
                         top_p=0.95,
                         frequency_penalty=0,
                         presence_penalty=0,
-                        stop=None,
+                        stop=None, 
                     )
                     sa_dict = student_answer_data.__dict__
                     sa_dict["result"] = completion.choices[0].message.content
                     sa_dict["answer"] = student_answer
+                    sa_dict["student_name"] = student_name
+                    sa_dict["question_id"] = q.id
                     new_sa = await sa_crud.create(sa_dict, db)
                     results.append(completion)
     # url = s3_driver.upload(file=file_data, dest_dir="answer", protocol="")

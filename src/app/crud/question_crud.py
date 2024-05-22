@@ -13,3 +13,6 @@ class CRUDQuestion(CRUDBase[Question]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
+    
+    def read_by_title(self, assignment_id: int, question_title: str, db: Session) -> Question:
+        return db.query(Question).filter(Question.assignment_id == assignment_id and Question.question_title == question_title).first()

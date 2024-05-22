@@ -7,6 +7,7 @@ class QuestionRegisterSchema(BaseModel):
     instruction: str
     marking_criteria: str
     assignment_id: int
+    question_title: str
     
     @classmethod
     def __get_validators__(cls):
@@ -24,6 +25,7 @@ class QuestionResponseSchema(BaseModel):
     instruction: str
     marking_criteria: str
     assignment_id: int
+    question_title: str
 
     class Config:
         orm_mode = True

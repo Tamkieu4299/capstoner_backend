@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 class StudentAnswerRegisterSchema(BaseModel):
     assignment_id: int
-    question_id: int
 
     @classmethod
     def __get_validators__(cls):

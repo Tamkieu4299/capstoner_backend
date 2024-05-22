@@ -11,6 +11,7 @@ class Question(BaseModel):
     instruction = Column(String, nullable=False)
     marking_criteria = Column(String, nullable=False)
     assignment_id = Column(Integer, ForeignKey('assignments.id'), nullable=True)
+    question_title = Column(String, nullable=False)
     created_by = Column(
         Integer,
         ForeignKey(
