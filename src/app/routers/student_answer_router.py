@@ -31,7 +31,6 @@ router = APIRouter()
 sa_crud = CRUDStudenAnswer(StudentAnswer)
 question_crud = CRUDQuestion(Question)
 
-
 @router.post("/auto-grader", status_code=status.HTTP_201_CREATED)
 async def auto_grader(
     student_answer_data: StudentAnswerRegisterSchema= Form(...),
@@ -80,10 +79,17 @@ async def auto_grader(
                     sa_dict["answer"] = student_answer
                     sa_dict["student_name"] = student_name
                     sa_dict["question_id"] = q.id
+                    sa_dict["question_title"] = q.question_title
                     new_sa = await sa_crud.create(sa_dict, db)
                     results.append(completion)
     # url = s3_driver.upload(file=file_data, dest_dir="answer", protocol="")
     # print(f"Uploaded {file_name} to S3 bucket with URL: {url}")
     # student_answer = s3_driver.get_file(url)
-
     return results
+
+@router.get("/result-summary/{assignment_id}")
+async def get_assignment(
+    assignment_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_active_user)
+):
+    sas = sa_crud.read_by_assignment_id(assignment_id, db)
+    return [sa.__dict__ for sa in sas]
