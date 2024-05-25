@@ -15,4 +15,7 @@ class CRUDQuestion(CRUDBase[Question]):
         return db_obj
     
     def read_by_title(self, assignment_id: int, question_title: str, db: Session) -> Question:
-        return db.query(Question).filter(Question.assignment_id == assignment_id and Question.question_title == question_title).first()
+        return db.query(Question).where(Question.assignment_id == assignment_id, Question.question_title == question_title).first()
+    
+    def read_by_assignment_id(self, assignment_id: int, db: Session) -> Question:
+        return db.query(Question).filter(Question.assignment_id == assignment_id).all()

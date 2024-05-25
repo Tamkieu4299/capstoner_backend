@@ -18,3 +18,5 @@ starlette-context==0.3.5
 python-jose==3.3.0
 boto3
 openai
+chardet
+python-docx

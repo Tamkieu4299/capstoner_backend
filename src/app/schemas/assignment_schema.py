@@ -18,8 +18,10 @@ class AssignmentRegisterSchema(BaseModel):
     
 class Question(BaseModel):
     id: int
-    standard_answer: str
+    standard_answer: str = None
     assignment_id: int
+    instruction: str
+    marking_criteria: str
 
     class Config:
         orm_mode = True

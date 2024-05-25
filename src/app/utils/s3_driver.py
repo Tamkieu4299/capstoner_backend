@@ -4,6 +4,8 @@ from fastapi import UploadFile
 from app.utils.logger import setup_logger
 from datetime import datetime
 from ..constants.config import Settings
+from io import BytesIO
+from docx import Document
 
 settings = Settings()
 logger = setup_logger(__name__)
@@ -55,6 +57,31 @@ def get_file(file_key, bucket_name: str = IMAGE_BUCKET):
     response = client.get_object(Bucket=bucket_name, Key=file_key)
     # Read the content of the object
     file_content = response['Body'].read().decode('utf-8')
+    return file_content
+
+def get_docx_file(file_key, bucket_name: str = IMAGE_BUCKET):
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY,
+        endpoint_url=S3_URL,
+    )
+    response = client.get_object(Bucket=bucket_name, Key=file_key)
+    file_content = response['Body'].read()  # Read the content of the object as binary
+
+    # Load the DOCX file
+    doc = Document(BytesIO(file_content))
+    
+    # Extract text from the DOCX file
+    full_text = []
+    for paragraph in doc.paragraphs:
+        full_text.append(paragraph.text)
+    
+    doc_text = "\n".join(full_text)
+    
+    print("==============")
+    print(doc_text)
+    print("==============")
     return file_content
  
 
