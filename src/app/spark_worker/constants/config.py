@@ -1,6 +1,6 @@
 from pydantic import BaseSettings
 from functools import lru_cache
-from ..psql import PSQLFactory
+from app.spark_worker.psql import PSQLFactory
 
 
 @lru_cache()

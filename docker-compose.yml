@@ -1,13 +1,13 @@
 version: "2"
 
 services:
-  wedi-server-dev:
+  server-dev:
     build:
       context: ./src
       dockerfile: ./Dockerfile
       target: development
-    image: wedi-app-server-image-dev
-    container_name: wedi-app-server-container-dev
+    image: app-server-image-dev
+    container_name: app-server-container-dev
     profiles:
       - dev
     ports:
@@ -17,16 +17,35 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - wedi-postgres-db
+      - postgres-db
     links:
-      -  wedi-postgres-db
+      -  postgres-db
     volumes:
       - ./src/app:/app
       - ./src/logs:/var/logs
       - ./static:/static
 
-  wedi-postgres-db:
-    container_name:  wedi-postgres-db
+  worker:
+    build:
+      context: ./src
+      dockerfile: ./DockerfileWorker
+      target: development
+    image: app-worker-image-dev
+    container_name: app-worker-container-dev
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres-db
+    links:
+      - postgres-db
+    volumes:
+      - ./src/app:/app
+      - ./src/logs:/var/logs
+      - ./static:/static
+    # entrypoint: ["/app/entrypoint-worker.sh"]
+
+  postgres-db:
+    container_name:  postgres-db
     image: postgres:12.1-alpine
     profiles:
       - prod
@@ -37,14 +56,14 @@ services:
     env_file:
       - ./.env
 
-  wedi-minio:
+  minio:
     image: minio/minio
-    container_name: wedi-minio
+    container_name: minio
     profiles:
       - dev
     ports:
-      - 9000:9000
-      - 9001:9001
+      - 9002:9002
+      - 9003:9003
     volumes:
       - ./data/minio:/data
     environment:
@@ -52,6 +71,13 @@ services:
       MINIO_ROOT_PASSWORD: master123123
     command: server --console-address ":9001" /data
 
+  redis-internal:
+    image: 'redis:6.2-alpine'
+    ports:
+      - '6379:6379'
+    container_name: redis-internal
+
+    
 volumes:
-   wedi-postgres-db:
+   postgres-db:
 

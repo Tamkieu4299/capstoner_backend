@@ -1,0 +1,21 @@
+FROM python:3.11-slim as base
+
+RUN apt-get update
+
+WORKDIR /
+RUN mkdir /logs
+RUN mkdir -p /static/audio
+RUN mkdir -p /data
+
+# Copy the requirements.txt file to the container
+COPY ./requirements.txt /
+
+# Install dependencies using pip
+RUN pip3 install --no-cache-dir -r /requirements.txt
+
+### DEVELOPMENT ###
+FROM base as development
+
+COPY . .
+
+ENTRYPOINT [ "/app/entrypoint-worker.sh" ]

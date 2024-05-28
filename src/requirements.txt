@@ -20,3 +20,4 @@ boto3
 openai
 chardet
 python-docx
+redis
