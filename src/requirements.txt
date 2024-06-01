@@ -21,3 +21,4 @@ openai
 chardet
 python-docx
 redis
+rq

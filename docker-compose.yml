@@ -25,24 +25,24 @@ services:
       - ./src/logs:/var/logs
       - ./static:/static
 
-  worker:
+  rq-worker:
     build:
       context: ./src
       dockerfile: ./DockerfileWorker
       target: development
-    image: app-worker-image-dev
-    container_name: app-worker-container-dev
+    image: rq-worker-image-dev
+    container_name: rq-worker-container-dev
     env_file:
       - ./.env
     depends_on:
-      - postgres-db
+      - redis-internal
     links:
-      - postgres-db
+      - redis-internal
     volumes:
       - ./src/app:/app
       - ./src/logs:/var/logs
       - ./static:/static
-    # entrypoint: ["/app/entrypoint-worker.sh"]
+    entrypoint: ["rq", "worker", "default"]
 
   postgres-db:
     container_name:  postgres-db
@@ -62,8 +62,8 @@ services:
     profiles:
       - dev
     ports:
-      - 9002:9002
-      - 9003:9003
+      - 9000:9000
+      - 9001:9001
     volumes:
       - ./data/minio:/data
     environment:

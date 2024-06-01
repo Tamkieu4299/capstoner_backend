@@ -22,9 +22,6 @@ class StudentAnswer(BaseModel):
         ),
     )
 
-    assignment = relationship(
-        "Assignment", backref="answer_for_assignment", foreign_keys=[assignment_id]
-    )
     question = relationship(
         "Question", backref="answer_for_question", foreign_keys=[question_id]
     )

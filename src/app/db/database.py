@@ -17,12 +17,13 @@ class PSQLManager(object):
 
         self._Session = scoped_session(
             sessionmaker(autocommit=False, autoflush=False),
-            scopefunc=lambda: context["request_id"],
+            # scopefunc=lambda: context["request_id"],
         )
         # Database URL
         url = f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOSTNAME}:{settings.DATABASE_PORT}/{settings.POSTGRES_DB}"
 
         self._base_engine = create_engine(url=url, echo=True, poolclass=NullPool)
+
 
     def get_session(self):
         return self._Session(bind=self._base_engine)
@@ -32,7 +33,6 @@ class PSQLManager(object):
 
     def remove(self):
         self._Session.remove()
-
 
 def get_db(manager=Depends(PSQLManager.Instance)):
 
