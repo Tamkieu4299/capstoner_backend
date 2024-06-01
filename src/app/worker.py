@@ -11,5 +11,5 @@ _metadata_obj.create_all(bind=PSQLManager.Instance().get_base_engin(), checkfirs
 
 if __name__ == '__main__':
     with Connection(conn):
-        worker = Worker(map(Queue, listen))
+        worker = Worker(map(Queue, listen), default_job_timeout=600)
         worker.work()
