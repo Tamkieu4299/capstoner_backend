@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     DEFAULT_REGION: str
     REDIS_HOST = str
     REDIS_PORT = str
+    AZURE_ENDPOINT= str
+    AZURE_API_KEY = str
+    AZURE_API_VERSION= str
     # REDIS_SSL = getattr(settings, 'REDIS_SSL', False)
 
     @property

@@ -14,9 +14,9 @@ settings = Settings()
 sa_crud = CRUDStudenAnswer(StudentAnswer)
 question_crud = CRUDQuestion(Question)
 llm = AzureOpenAI(
-    azure_endpoint="https://autograding-testing.openai.azure.com/",
-    api_key="43a6c04255634b67803c38900d403bc0",
-    api_version="2024-02-15-preview",
+    azure_endpoint=settings.AZURE_ENDPOINT,
+    api_key=settings.AZURE_API_KEY,
+    api_version=settings.AZURE_API_VERSION,
 )
 
 initial_prompt = "You are a teacher assistant who helps to grade student code assessment."

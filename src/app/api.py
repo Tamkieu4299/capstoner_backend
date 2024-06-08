@@ -47,8 +47,8 @@ app.add_middleware(
 #     plugins=(plugins.RequestIdPlugin(),)
 # )
 
-# app.add_middleware(RequestContextMiddleware)
-# app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestContextMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 # Include the router
 app.include_router(auth_router, tags=["Authenication"], prefix=f"{PREFIX}/auth")
