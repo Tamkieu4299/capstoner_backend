@@ -28,7 +28,7 @@ async def register(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    data_dict = data.dict()
+    data_dict = data.model_dump()
     new = await course_crud.create(data_dict, db)
     if new is None:
         logger.info(
@@ -48,6 +48,5 @@ async def get(
         course_dict = course.__dict__
         course_dict["assignments"] = assignments
         courses_dict_list.append(course_dict)
-    print(courses_dict_list)
     logger.info(f"Number of course: {len(courses_dict_list)}")
     return courses_dict_list
