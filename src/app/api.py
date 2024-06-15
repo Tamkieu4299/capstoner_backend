@@ -7,6 +7,7 @@ from .routers.assignment_router import router as assignment_router
 from .routers.question_router import router as question_router
 from .routers.student_answer_router import router as student_answer_router
 from .routers.queue_router import router as queue_router
+from .routers.course_router import router as course_router
 from fastapi.staticfiles import StaticFiles
 from .middleware.request_context import RequestContextMiddleware
 from .middleware.request_logging import RequestLoggingMiddleware
@@ -57,4 +58,6 @@ app.include_router(assignment_router, tags=["Assignment"], prefix=f"{PREFIX}/ass
 app.include_router(question_router, tags=["Question"], prefix=f"{PREFIX}/question")
 app.include_router(student_answer_router, tags=["Auto-grader"], prefix=f"{PREFIX}/auto")
 app.include_router(queue_router, tags=["Processing"], prefix=f"{PREFIX}/processing")
+app.include_router(course_router, tags=["Course"], prefix=f"{PREFIX}/course")
+
 

@@ -4,6 +4,7 @@ from typing import List
 from pydantic import BaseModel
 
 class AssignmentRegisterSchema(BaseModel):
+    course_id: int
     name: str
     
     @classmethod
@@ -29,6 +30,7 @@ class Question(BaseModel):
 class AssignmentResponseSchema(BaseModel):
     id: int
     name: str
+    course_id: int
     questions: List[Question] = []
     
     class Config:

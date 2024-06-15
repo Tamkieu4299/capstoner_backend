@@ -21,9 +21,9 @@ class Question(BaseModel):
         ),
     )
 
-    # assignment = relationship(
-    #     "Assignment", backref="question_for_assignment", foreign_keys=[assignment_id]
-    # )
+    assignment = relationship(
+        "Assignment", backref="question_for_assignment", foreign_keys=[assignment_id]
+    )
 
     class Config:
         orm_mode = True 
