@@ -11,7 +11,8 @@ class Course(BaseModel):
     name = Column(String, nullable=False)
     semester = Column(String, nullable=False)
     year = Column(String, nullable=False)
-    
+    school_id = Column(Integer, nullable=False)
+
     created_by = Column(
         Integer,
         ForeignKey(
