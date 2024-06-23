@@ -8,14 +8,12 @@ class Assignment(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String, nullable=False)
     course_id = Column(Integer, nullable=False)
-    created_by = Column(
-        Integer,
-        ForeignKey(
-            "users.id",
-            onupdate="RESTRICT",
-            ondelete="RESTRICT",
-        ),
-    )
+    marking_criteria_filepath = Column(String, nullable=False)
+    questions_filepath = Column(String, nullable=False)
+    instruction = Column(String, nullable=True)
+    student_answer_filepath = Column(String, nullable=False)
+    number_of_questions = Column(Integer, default=0)
+    number_of_submissions = Column(Integer, default = 0)
 
     class Config:
         orm_mode = True 

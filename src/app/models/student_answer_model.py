@@ -10,21 +10,7 @@ class StudentAnswer(BaseModel):
     student_name = Column(String, nullable=True)
     answer = Column(String, nullable=False)
     assignment_id = Column(Integer, ForeignKey('assignments.id'), nullable=True)
-    question_id = Column(Integer, ForeignKey('questions.id'), nullable=True)
     question_title = Column(String, nullable=True)
     result = Column(String, nullable=True)
-    created_by = Column(
-        Integer,
-        ForeignKey(
-            "users.id",
-            onupdate="RESTRICT",
-            ondelete="RESTRICT",
-        ),
-    )
-
-    question = relationship(
-        "Question", backref="answer_for_question", foreign_keys=[question_id]
-    )
-
     class Config:
         orm_mode = True 

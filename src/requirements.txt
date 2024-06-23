@@ -19,6 +19,7 @@ python-jose==3.3.0
 boto3
 openai
 chardet
+charset_normalizer
 python-docx
 redis
 rq

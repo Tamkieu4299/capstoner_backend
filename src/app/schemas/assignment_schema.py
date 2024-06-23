@@ -16,22 +16,17 @@ class AssignmentRegisterSchema(BaseModel):
         if isinstance(value, str):
             return cls(**json.loads(value))
         return value
-    
-class Question(BaseModel):
-    id: int
-    standard_answer: str = None
-    assignment_id: int
-    instruction: str
-    marking_criteria: str
-
-    class Config:
-        orm_mode = True
 
 class AssignmentResponseSchema(BaseModel):
     id: int
     name: str
     course_id: int
-    questions: List[Question] = []
-    
+    marking_criteria_filepath: str
+    questions_filepath: str
+    student_answer_filepath: str
+    number_of_questions: int = 0
+    number_of_submissions: int = 0
+    instruction: str = None
+
     class Config:
         orm_mode = True

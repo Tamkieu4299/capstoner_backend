@@ -11,8 +11,12 @@ from fastapi import APIRouter, Depends, status, Form, UploadFile, File
 from app.schemas.assignment_schema import AssignmentRegisterSchema, AssignmentResponseSchema
 from sqlalchemy.orm import Session
 from ..utils import s3_driver
-
+from rq import Queue
+from redis import Redis
+from ..processors.create_assignment_processor import create_assignment_processor
 from ..secret import get_current_active_user
+from io import BytesIO
+
 logger = setup_logger(__name__)
 
 router = APIRouter()
@@ -20,25 +24,27 @@ router = APIRouter()
 assignment_crud = CRUDAssignment(Assignment)
 assignment_question_crud = CRUDAssignmentQuestion(AssignmentQuestion)
 
+redis_conn = Redis(host='redis-internal', port=6379)
+queue = Queue('default', connection=redis_conn)
+
 @router.post(
 "/add",
     status_code=status.HTTP_201_CREATED,
-    response_model=AssignmentRegisterSchema,
+    # response_model=AssignmentRegisterSchema,
 )
 async def register_assignment(
-    assignment_data: AssignmentRegisterSchema,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_user),
-):
-    assignment_data_dict = assignment_data
-    assignment_data_dict["created_by"] = current_user["user"].id
-    new_assignment = await assignment_crud.create(assignment_data_dict, db)
-    if new_assignment is None:
-        logger.info(
-            f"Fail to create assignment"
-        )
-        raise CommonInvalid(detail=f"Fail to create assignment")
-    return new_assignment.__dict__
+    assignment_data: AssignmentRegisterSchema = Form(...),
+    student_answers_file: UploadFile = File(...),
+    questions_file: UploadFile = File(...),
+    criteria_file: UploadFile = File(...),
+    # current_user=Depends(get_current_active_user),
+):  
+    student_answers_file_bytes = await student_answers_file.read()
+    student_answers_zip = BytesIO(student_answers_file_bytes)
+
+    queue.enqueue(create_assignment_processor, assignment_data, student_answers_file, student_answers_zip, questions_file, criteria_file)
+    return "Successfully sent to queue"
+
 
 @router.get("/search", response_model=List[AssignmentResponseSchema])
 async def get_assignments(

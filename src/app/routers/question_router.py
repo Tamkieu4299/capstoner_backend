@@ -56,8 +56,6 @@ async def register_question_by_files(
 
     question_data_dict = question_data.dict()
     question_data_dict["created_by"] = current_user["user"].id
-    question_data_dict["instruction"] = instruction_data
-    question_data_dict["marking_criteria"] = criteria_data
 
     new_question = await question_crud.create(question_data_dict, db)
     if new_question is None:

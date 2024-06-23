@@ -3,9 +3,6 @@ import json
 from pydantic import BaseModel
 
 class QuestionRegisterSchema(BaseModel):
-    standard_answer: str = None
-    instruction: str
-    marking_criteria: str
     assignment_id: int
     question_title: str
     
@@ -35,9 +32,6 @@ class QuestionRegisterByFileSchema(BaseModel):
 
 class QuestionResponseSchema(BaseModel):
     id: int
-    standard_answer: str = None
-    instruction: str
-    marking_criteria: str
     assignment_id: int
     question_title: str
 
