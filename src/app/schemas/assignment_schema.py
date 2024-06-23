@@ -29,5 +29,8 @@ class AssignmentResponseSchema(BaseModel):
     instruction: str = None
     created_at: datetime = None
     evaluation_status: bool
+    lecture_check_status: bool
+    sensitive_rmv_status: bool
+
     class Config:
         orm_mode = True

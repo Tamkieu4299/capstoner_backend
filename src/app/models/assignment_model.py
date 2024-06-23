@@ -15,6 +15,7 @@ class Assignment(BaseModel):
     number_of_questions = Column(Integer, default=0)
     number_of_submissions = Column(Integer, default = 0)
     evaluation_status = Column(Boolean, default=False)
-
+    lecture_check_status = Column(Boolean, default=False)
+    sensitive_rmv_status = Column(Boolean, default=False)
     class Config:
         orm_mode = True 
