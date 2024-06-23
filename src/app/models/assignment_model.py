@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String,Boolean
 
 from ._base_model import BaseModel
 
@@ -14,6 +14,7 @@ class Assignment(BaseModel):
     student_answer_filepath = Column(String, nullable=False)
     number_of_questions = Column(Integer, default=0)
     number_of_submissions = Column(Integer, default = 0)
+    evaluation_status = Column(Boolean, default=False)
 
     class Config:
         orm_mode = True 

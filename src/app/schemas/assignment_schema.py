@@ -1,6 +1,6 @@
 import json
 from typing import List
-
+from datetime import datetime
 from pydantic import BaseModel
 
 class AssignmentRegisterSchema(BaseModel):
@@ -27,6 +27,7 @@ class AssignmentResponseSchema(BaseModel):
     number_of_questions: int = 0
     number_of_submissions: int = 0
     instruction: str = None
-
+    created_at: datetime = None
+    evaluation_status: bool
     class Config:
         orm_mode = True

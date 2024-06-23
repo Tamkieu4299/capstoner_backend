@@ -75,11 +75,5 @@ async def get_assignment(
     course_id: int, db: Session = Depends(get_db)
 ):
     assignments = assignment_crud.read_by_course_id(course_id, db)
-    assignments_dict_list = []
-    for assignment in assignments:
-        questions = assignment_question_crud.get_questions_by_assignment(assignment.id, db)
-        assignment_dict = assignment.__dict__
-        assignment_dict["questions"] = questions
-        assignments_dict_list.append(assignment_dict)
-    logger.info(f"Number of assignments: {len(assignments_dict_list)}")
-    return assignments_dict_list
+    logger.info(f"Number of assignments: {len(assignments)}")
+    return assignments
