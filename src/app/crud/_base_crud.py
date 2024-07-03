@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, List
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
@@ -44,3 +44,11 @@ class CRUDBase(Generic[ModelType]):
 
     def get_all(self, db: Session, skip: int = 0, limit: int = 10):
         return db.query(self.model).offset(skip).limit(limit).all()
+
+    async def bulk_create(self, objs_in: List[dict], db: Session):
+        db_objs = [self.model(**obj_in) for obj_in in objs_in]
+        db.add_all(db_objs)
+        db.commit()
+        for db_obj in db_objs:
+            db.refresh(db_obj)
+        return db_objs

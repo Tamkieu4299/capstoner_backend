@@ -12,5 +12,7 @@ class StudentAnswer(BaseModel):
     assignment_id = Column(Integer, ForeignKey('assignments.id'), nullable=True)
     question_title = Column(String, nullable=True)
     result = Column(String, nullable=True)
+    protected_answer = Column(String, nullable=True)
+    
     class Config:
         orm_mode = True 

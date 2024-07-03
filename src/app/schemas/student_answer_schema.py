@@ -20,6 +20,13 @@ class StudentAnswerResponseSchema(BaseModel):
     answer: str
     assignment_id: int
     question_id: int
+    protected_answer: str = None
+
+    class Config:
+        orm_mode = True
+
+class PrivacyInputSchema(BaseModel):
+    assignment_id: int
 
     class Config:
         orm_mode = True

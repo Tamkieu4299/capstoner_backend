@@ -23,3 +23,6 @@ charset_normalizer
 python-docx
 redis
 rq
+flair==0.13.1
+scipy==1.12
+transformers==4.42.3
