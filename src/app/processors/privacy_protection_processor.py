@@ -36,31 +36,26 @@ def detect_sensitive_info(text):
 
     # Sort matches by their position in the text to maintain order
     matches = sorted(set(matches), key=lambda x: text.find(x))
-
-    for match in matches:
+    
+    for idx, match in enumerate(matches):
         if not any(match in info for info in sensitive_info):
             sensitive_info.append(match)
+            text = text.replace(match, f"{idx}.[REMOVED]", 1)
 
-    return sensitive_info
+    return text, sensitive_info
 
-def privacy_protection_processor(assignment_id):
+async def privacy_protection_processor(assignment_id):
     sessionmaker = settings.psql_factory.create_sessionmaker()
     with sessionmaker() as db:
         sas = sa_crud.read_by_assignment_id(assignment_id, db)
-        print(sas)
         for sa in sas:
             bulk_data = []
-            sensi_data = detect_sensitive_info(sa.answer)
-            print("sensiiiiii")
-            print(sensi_data)
+            rm_text, sensi_data = detect_sensitive_info(sa.answer)
             for idx, sd in enumerate(sensi_data):
                 bulk_data.append({
                     "student_answer_id": sa.id,
                     "original_value": sd,
                     "order": idx
                 })
-            print("bulkkkk")
-            print(bulk_data)
-            rw_crud.bulk_create(bulk_data, db)
-
-    # pass
+            sa_crud.update(sa.id, {"protected_answer": rm_text}, db)
+            await rw_crud.bulk_create(bulk_data, db)

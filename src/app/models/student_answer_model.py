@@ -9,7 +9,7 @@ class StudentAnswer(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
     student_name = Column(String, nullable=True)
     answer = Column(String, nullable=False)
-    assignment_id = Column(Integer, ForeignKey('assignments.id'), nullable=True)
+    assignment_id = Column(Integer, nullable=True)
     question_title = Column(String, nullable=True)
     result = Column(String, nullable=True)
     protected_answer = Column(String, nullable=True)

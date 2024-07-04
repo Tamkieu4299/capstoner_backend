@@ -13,6 +13,9 @@ COPY ./requirements.txt /
 # Install dependencies using pip
 RUN pip3 install --no-cache-dir -r /requirements.txt
 
+# Pre-download Flair model
+RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('ner')"
+
 ### DEVELOPMENT ###
 FROM base as development
 
