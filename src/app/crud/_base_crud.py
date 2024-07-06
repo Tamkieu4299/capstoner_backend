@@ -52,3 +52,14 @@ class CRUDBase(Generic[ModelType]):
         for db_obj in db_objs:
             db.refresh(db_obj)
         return db_objs
+    
+    def bulk_update(self, objs_in: List[dict], db: Session):
+        for obj_in in objs_in:
+            db_obj = db.query(self.model).filter(self.model.id == obj_in['id']).first()
+            if db_obj:
+                for key, value in obj_in.items():
+                    if not value:
+                        continue
+                    setattr(db_obj, key, value)
+        db.commit()
+        return [db.query(self.model).filter(self.model.id == obj_in['id']).first() for obj_in in objs_in]

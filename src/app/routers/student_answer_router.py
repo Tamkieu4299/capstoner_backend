@@ -33,16 +33,12 @@ queue = Queue('default', connection=redis_conn)
 
 @router.post("/auto-grader", status_code=status.HTTP_201_CREATED)
 async def auto_grader(
-    student_answer_data: StudentAnswerRegisterSchema= Form(...),
-    file: UploadFile = File(...),
+    student_answer_data: StudentAnswerRegisterSchema,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    # current_user=Depends(get_current_active_user),
 ):
-    file_bytes = await file.read()
-    zip_file = BytesIO(file_bytes)
     
-    if zipfile.is_zipfile(zip_file):
-        queue.enqueue(auto_evaluation_processor, student_answer_data, zip_file)
+    queue.enqueue(auto_evaluation_processor, student_answer_data.assignment_id)
     return "Successfully sent to queue"
 
 @router.post("/privacy-protection", status_code=status.HTTP_201_CREATED)
@@ -55,6 +51,13 @@ async def auto_grader(
     return "Successfully sent to queue"
 
 @router.get("/result-summary/{assignment_id}")
+async def get_assignment(
+    assignment_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_active_user)
+):
+    sas = sa_crud.read_by_assignment_id(assignment_id, db)
+    return [sa.__dict__ for sa in sas]
+
+@router.put("/privacy-protection")
 async def get_assignment(
     assignment_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_active_user)
 ):

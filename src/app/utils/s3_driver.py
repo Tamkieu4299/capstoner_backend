@@ -59,6 +59,16 @@ def get_file(file_key, bucket_name: str = IMAGE_BUCKET):
     file_content = response['Body'].read().decode('utf-8')
     return file_content
 
+def get_file_draw(file_key, bucket_name: str = IMAGE_BUCKET):
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY,
+        endpoint_url=S3_URL,
+    )
+    response = client.get_object(Bucket=bucket_name, Key=file_key)
+    return response
+
 def get_docx_file(file_key, bucket_name: str = IMAGE_BUCKET):
     client = boto3.client(
         "s3",
