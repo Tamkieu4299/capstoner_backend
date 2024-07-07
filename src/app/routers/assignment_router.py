@@ -48,7 +48,7 @@ async def register_assignment(
 
 @router.get("/search", response_model=List[AssignmentResponseSchema])
 async def get_assignments(
-    db: Session = Depends(get_db), current_user=Depends(get_current_active_user)
+    db: Session = Depends(get_db)
 ):
     assignments = assignment_crud.get_all(db)
     assignments_dict_list = []

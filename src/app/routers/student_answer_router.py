@@ -44,13 +44,13 @@ async def auto_grader(
     queue.enqueue(auto_evaluation_processor, student_answer_data.assignment_id)
     return "Successfully sent to queue"
 
-@router.post("/privacy-protection", status_code=status.HTTP_201_CREATED)
+@router.post("/privacy-protection/{assignment_id}", status_code=status.HTTP_201_CREATED)
 async def auto_grader(
-    privacy_input: PrivacyInputSchema,
+    assignment_id: int,
     db: Session = Depends(get_db),
     # current_user=Depends(get_current_active_user),
 ):
-    queue.enqueue(privacy_protection_processor, privacy_input.assignment_id)
+    queue.enqueue(privacy_protection_processor, assignment_id)
     return "Successfully sent to queue"
 
 @router.get("/result-summary/{assignment_id}")
@@ -60,7 +60,7 @@ async def get_assignment(
     sas = sa_crud.read_by_assignment_id(assignment_id, db)
     return [sa.__dict__ for sa in sas]
 
-@router.get("/privacy-protection")
+@router.get("/privacy-protection/{assignment_id}")
 async def get_sensi_info(
     assignment_id: int, db: Session = Depends(get_db)
 ):
@@ -74,6 +74,26 @@ async def get_sensi_info(
             "student_answer": sa.__dict__,
             "removed_words": [f"""{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict]
         })
+    return rsp
+
+
+@router.get("/privacy-protection/format/{assignment_id}")
+async def get_sensi_info_format(
+    assignment_id: int, db: Session = Depends(get_db)
+):
+    rsp = {
+        "File Name": [],
+        "Student Work": [],
+        "Sensitive Data Removed": []
+    }
+    sas = sa_crud.read_by_assignment_id(assignment_id, db)
+    for sa in sas:
+        rmws = await rm_crud.read_by_student_answer_id(sa.id, db)
+        rmws_dict = [rmw.__dict__ for rmw in rmws]
+        print(rmws_dict)
+        rsp["File Name"].append(sa.student_name)
+        rsp["Student Work"].append(sa.protected_answer)
+        rsp["Sensitive Data Removed"].append([f"""{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict])
     return rsp
 
 @router.get("/privacy/{student_answer_id}")

@@ -42,8 +42,11 @@ class CRUDBase(Generic[ModelType]):
         db.commit()
         return db_obj
 
-    def get_all(self, db: Session, skip: int = 0, limit: int = 10):
-        return db.query(self.model).offset(skip).limit(limit).all()
+    # def get_all(self, db: Session, skip: int = 0, limit: int = 10):
+    #     return db.query(self.model).offset(skip).limit(limit).all()
+    
+    def get_all(self, db: Session):
+        return db.query(self.model).all()
 
     async def bulk_create(self, objs_in: List[dict], db: Session):
         db_objs = [self.model(**obj_in) for obj_in in objs_in]
