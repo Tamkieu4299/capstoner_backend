@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     AZURE_ENDPOINT= str
     AZURE_API_KEY = str
     AZURE_API_VERSION= str
+    GPT4_AZURE_ENDPOINT= str
+    GPT4_AZURE_API_KEY = str
+    GPT4_AZURE_API_VERSION= str
     # REDIS_SSL = getattr(settings, 'REDIS_SSL', False)
 
     @property
