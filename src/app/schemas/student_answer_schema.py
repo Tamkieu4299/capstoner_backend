@@ -1,5 +1,6 @@
 import json
 
+from typing import List
 from pydantic import BaseModel
 
 class StudentAnswerRegisterSchema(BaseModel):
@@ -27,6 +28,13 @@ class StudentAnswerResponseSchema(BaseModel):
 
 class PrivacyInputSchema(BaseModel):
     assignment_id: int
+
+    class Config:
+        orm_mode = True
+
+class UpdatePrivacyInfoSchema(BaseModel):
+    removed_word_ids: List[int]
+    modified_student_work: str
 
     class Config:
         orm_mode = True

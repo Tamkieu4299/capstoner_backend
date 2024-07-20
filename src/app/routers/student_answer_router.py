@@ -7,10 +7,11 @@ from app.models.question_model import Question
 from app.models.removed_word_model import RemovedWords
 from app.crud.removed_word_crud import CRUDRemovedWord
 from app.utils.logger import setup_logger
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response
 from app.schemas.student_answer_schema import (
     StudentAnswerRegisterSchema,
-    PrivacyInputSchema
+    PrivacyInputSchema,
+    UpdatePrivacyInfoSchema
 )
 from sqlalchemy.orm import Session
 from ..secret import get_current_active_user
@@ -90,10 +91,9 @@ async def get_sensi_info_format(
     for sa in sas:
         rmws = await rm_crud.read_by_student_answer_id(sa.id, db)
         rmws_dict = [rmw.__dict__ for rmw in rmws]
-        print(rmws_dict)
         rsp["File Name"].append(sa.student_name)
         rsp["Student Work"].append(sa.protected_answer)
-        rsp["Sensitive Data Removed"].append([f"""{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict])
+        rsp["Sensitive Data Removed"].append([f"""{r.get("id")}.{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict])
     return rsp
 
 @router.get("/privacy/{student_answer_id}")
@@ -109,3 +109,19 @@ async def get_detail_sensi_info(
         "removed_words": [f"""{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict]
     }
     return rsp
+
+@router.post("/privacy/update")
+async def update_sensi_info(
+    data: UpdatePrivacyInfoSchema, db: Session = Depends(get_db)
+):
+    if len(data.removed_word_ids):
+        sa_id = rm_crud.read(data.removed_word_ids[0], db).student_answer_id
+
+        # delete removed info
+        deleted_ids = data.removed_word_ids
+        rm_crud.bulk_soft_delete(deleted_ids, db)
+
+        # update student work
+        sa_crud.update(sa_id, {"protected_answer": data.modified_student_work}, db)
+
+    return Response()

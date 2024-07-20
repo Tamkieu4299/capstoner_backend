@@ -36,6 +36,13 @@ class CRUDBase(Generic[ModelType]):
         db.refresh(db_obj)
         return db_obj
 
+    def bulk_soft_delete(self, ids: list[int], db: Session):
+        # Perform a bulk update for all matching records
+        db.query(self.model).filter(self.model.id.in_(ids)).update({self.model.is_deleted: True}, synchronize_session=False)
+        db.commit()
+        return True
+
+    
     def delete(self, id: int, db: Session):
         db_obj = db.query(self.model).filter(self.model.id == id).first()
         db.delete(db_obj)

@@ -59,8 +59,6 @@ async def auto_evaluation_processor(asm_id):
                         "\nHere's the studentent answer:\n" + processed,
                     ]
                 )
-                print("prompt=====")
-                print(prompt)
                 messages = [
                     {
                         "role": "system",
@@ -84,7 +82,6 @@ async def auto_evaluation_processor(asm_id):
                         completion.choices[0].message.content,
                         db,
                     )
-                    print("okkkk")
                 except Exception as err:
                     print(err)
                 accumulate_ids = []
