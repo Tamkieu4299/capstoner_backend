@@ -9,9 +9,10 @@ from app.models.student_answer_model import StudentAnswer
 from ..utils import common, s3_driver
 from openai import AzureOpenAI
 from app.constants.config import Settings
+import re
+import os
 
 settings = Settings()
-import os
 
 sa_crud = CRUDStudenAnswer(StudentAnswer)
 asm_crud = CRUDAssignment(Assignment)
@@ -26,13 +27,29 @@ llm = AzureOpenAI(
 initial_prompt = "I want you to act as an AI evaluating on students' coding work. I will provide you a text file of the coding question with points of the question in brackets (example: Question 1 (8pts)) and a text file of the standard marking criteria that you will need to follow to give recommended marks. I will provide you a folder contains coding works in text format and your task is to use artificial intelligence tools, such as natural language processing, to detect the programming language, give tailored feedback on how they can improve and write it in the Feedback section, only give 1 total recommended marks of the question point in the Score section, separated by a break line. Only use the marking criteria for standardizing the mark, do not give mark completely based on the provided marking criteria. You will also be given a sample marking from real instructors for each question in an Excel file, please also use this Excel file to give out the best recommended mark and tailored feedback for students. Here are the marking criteria, test question and the students' work in text:"
 
 
-async def divide_into_each_question(result):
-    pass
+async def get_content_after_question_title(text):
+    pattern = r"(Question \d+ \(\d+ pts\))"
+
+    parts = re.split(pattern, text)
+
+    result = []
+
+    for i in range(1, len(parts), 2):
+        question_content = parts[i + 1].strip()
+        result.append(question_content)
+    return result
 
 
 async def bulk_create_result(ids, result, db):
-    print(ids)
-    print(result)
+    res = await get_content_after_question_title(result)
+    payload = []
+
+    for i in range(len(ids)):
+        item = {"id": ids[i], "result": res[i]}
+        print(item)
+        payload.append(item)
+
+    sa_crud.bulk_update(payload, db)
 
 
 async def auto_evaluation_processor(asm_id):
@@ -62,24 +79,51 @@ async def auto_evaluation_processor(asm_id):
                 messages = [
                     {
                         "role": "system",
-                        # "content": "You are a teacher assistant who help to grade student code assesment.",
+                        "content": "You are a teacher assistant who help to evaluate and give mark student code assesment based on the marking criteria.",
                     },
                     {"role": "user", "content": prompt},
                 ]
                 try:
-                    completion = llm.chat.completions.create(
-                        model="AzureCodeGrader",
-                        messages=messages,
-                        temperature=0.7,
-                        max_tokens=800,
-                        top_p=0.95,
-                        frequency_penalty=0,
-                        presence_penalty=0,
-                        stop=None,
-                    )
-                    bulk_create_result(
+                    # completion = llm.chat.completions.create(
+                    #     model="AzureCodeGrader",
+                    #     messages=messages,
+                    #     temperature=0.7,
+                    #     max_tokens=800,
+                    #     top_p=0.95,
+                    #     frequency_penalty=0,
+                    #     presence_penalty=0,
+                    #     stop=None,
+                    # )
+                    dummy = """Question 1 (8 pts)
+Score: 7/8
+Feedback:
+- The program correctly prompts the user to enter three float numbers.
+- The program correctly checks if a number is the sum of the other two numbers.
+- The program correctly prints the result as "YES" or "NO".
+- However, there is a missing blank line between the code sections, which does not follow the code style requirement.
+Overall, the program is correct and efficient, but there is a minor issue with code style.
+Question 2 (8 pts)
+Score: 6/8
+Feedback:
+- The program correctly prompts the user to enter an even integer.
+- The program correctly calculates and prints the sum of all even values from 0 to the input number.
+- The program correctly stops when the user inputs an odd integer and prints an error message.
+- However, there is a missing blank line between the code sections, which does not follow the code style requirement.
+- The program does not have descriptive comments for each code section, which does not follow the code style requirement.
+Overall, the program is correct and efficient in terms of functionality, but there are issues with code style.
+Question 3 (9 pts)
+Score: 7/9
+Feedback:
+- The program correctly prompts the user to enter an integer between 1 and 10 inclusively.
+- The program correctly displays the pattern based on the input number.
+- However, there is a missing blank line between the code sections, which does not follow the code style requirement.
+- The program does not have descriptive comments for each code section, which does not follow the code style requirement.
+Overall, the program is correct and efficient in terms of functionality, but there are issues with code style.
+Total Score: 20/25"""
+                    await bulk_create_result(
                         accumulate_ids,
-                        completion.choices[0].message.content,
+                        dummy,
+                        # completion.choices[0].message.content,
                         db,
                     )
                 except Exception as err:

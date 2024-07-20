@@ -85,6 +85,7 @@ async def get_sensi_info_format(
     rsp = {
         "File Name": [],
         "Student Work": [],
+        "original_student_work": [],
         "Sensitive Data Removed": []
     }
     sas = sa_crud.read_by_assignment_id(assignment_id, db)
@@ -93,6 +94,7 @@ async def get_sensi_info_format(
         rmws_dict = [rmw.__dict__ for rmw in rmws]
         rsp["File Name"].append(sa.student_name)
         rsp["Student Work"].append(sa.protected_answer)
+        rsp["original_student_work"].append(sa.answer)
         rsp["Sensitive Data Removed"].append([f"""{r.get("id")}.{r.get("order")}.{r.get("original_value")}""" for r in rmws_dict])
     return rsp
 
