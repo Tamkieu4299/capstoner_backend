@@ -22,7 +22,7 @@ from rq import Queue
 from redis import Redis
 from app.processors.auto_evaluation_processor import auto_evaluation_processor
 from app.processors.privacy_protection_processor import privacy_protection_processor
-
+import re
 logger = setup_logger(__name__)
 
 router = APIRouter()
@@ -127,3 +127,39 @@ async def update_sensi_info(
         sa_crud.update(sa_id, {"protected_answer": data.modified_student_work}, db)
 
     return Response()
+
+
+@router.get("/result/{assignment_id}")
+async def get_detail_sensi_info(
+    assignment_id: int, db: Session = Depends(get_db)
+):
+    def get_score(text):
+        if not text:
+            return '0/0'
+        pattern = r"Score:\s*(\d+/\d+)"
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1)
+        return '0/0'
+    asm = asm_crud.read(assignment_id, db)
+    sas = sa_crud.read_by_assignment_id(assignment_id, db)
+    
+    rsp = {
+        "Assignment Question": [asm.number_of_questions],
+        "Student Name": [],
+        "Student ID": [],
+        "Question ID": [],
+        "Question Score": [],
+        "Question Feedbacks": []
+    }
+
+    for sa in sas:
+        rsp["Student Name"].append(sa.student_name)
+        rsp["Student ID"].append(sa.student_name)
+        rsp["Question ID"].append(sa.question_title)
+        rsp["Question Score"].append(get_score(sa.result))
+        rsp["Question Feedbacks"].append(sa.result)
+
+    return [rsp]
+        
+
