@@ -157,7 +157,7 @@ async def get_detail_sensi_info(
         rsp["Student Name"].append(sa.student_name)
         rsp["Student ID"].append(sa.student_name)
         rsp["Question ID"].append(sa.question_title)
-        rsp["Question Score"].append(get_score(sa.result))
+        rsp["Question Score"].append(sa.score)
         rsp["Question Feedbacks"].append(sa.result)
 
     return [rsp]

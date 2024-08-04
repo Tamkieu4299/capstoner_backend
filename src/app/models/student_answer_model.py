@@ -12,6 +12,7 @@ class StudentAnswer(BaseModel):
     assignment_id = Column(Integer, nullable=True)
     question_title = Column(String, nullable=True)
     result = Column(String, nullable=True)
+    score = Column(String, nullable=True, default="")
     protected_answer = Column(String, nullable=True)
     
     class Config:

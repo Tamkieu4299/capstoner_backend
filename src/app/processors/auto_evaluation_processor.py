@@ -26,6 +26,12 @@ llm = AzureOpenAI(
 
 initial_prompt = "I want you to act as an AI evaluating on students' coding work. I will provide you a text file of the coding question with points of the question in brackets (example: Question 1 (8pts)) and a text file of the standard marking criteria that you will need to follow to give recommended marks. I will provide you a folder contains coding works in text format and your task is to use artificial intelligence tools, such as natural language processing, to detect the programming language, give tailored feedback on how they can improve and write it in the Feedback section, only give 1 total recommended marks of the question point in the Score section, separated by a break line. Only use the marking criteria for standardizing the mark, do not give mark completely based on the provided marking criteria. You will also be given a sample marking from real instructors for each question in an Excel file, please also use this Excel file to give out the best recommended mark and tailored feedback for students. Here are the marking criteria, test question and the students' work in text:"
 
+def extract_score(text):
+    pattern = r'\d+/\d+'
+    match = re.search(pattern, text)
+    if match:
+        return match.group()
+    return None
 
 async def get_content_after_question_title(text):
     pattern = r"(Question \d+ \(\d+ pts\))"
@@ -45,7 +51,8 @@ async def bulk_create_result(ids, result, db):
     payload = []
 
     for i in range(len(ids)):
-        item = {"id": ids[i], "result": res[i]}
+        score = extract_score(res[i])
+        item = {"id": ids[i], "result": res[i], "score": score}
         print(item)
         payload.append(item)
 
@@ -63,11 +70,16 @@ async def auto_evaluation_processor(asm_id):
         current_student_name = None
         processed = ""
         accumulate_ids = []
-        for sa in sas:
+        for ind, sa in enumerate(sas):
             if (
                 current_student_name
                 and sa.student_name != current_student_name
-            ):
+            ) or ind == len(sas) - 1:
+                
+                if ind == len(sas) - 1:
+                    accumulate_ids.append(sa.id)
+                    processed += sa.protected_answer + "\n"
+
                 prompt = " ".join(
                     [
                         initial_prompt,

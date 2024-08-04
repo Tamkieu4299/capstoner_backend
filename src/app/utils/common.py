@@ -23,7 +23,8 @@ def escape_regex(text: str) -> str:
     }))
 
 def extract_student_info(filename):
-    pattern = r'.*/([A-Za-z0-9_]+)_(.*?)\.[A-Za-z]+$'
+    # pattern = r'.*/([A-Za-z0-9_]+)_(.*?)\.[A-Za-z]+$'
+    pattern = r'([A-Za-z0-9_]+)_(.*?)\.[A-Za-z]+$'
     match = re.search(pattern, filename)
     
     if match:

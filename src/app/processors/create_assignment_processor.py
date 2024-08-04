@@ -73,6 +73,9 @@ async def create_assignment_processor(assignment_data, student_file_upload, stud
             for file_name in zip_ref.namelist():
                 with zip_ref.open(file_name) as extracted_file:
                     student_name, question_title = common.extract_student_info(file_name)
+                    print("Extract infoooooooooo")
+                    print(file_name)
+                    print(student_name, question_title)
                     file_data = extracted_file.read()
                     if not file_data:
                         print(f"File {file_name} is empty, skipping.")
