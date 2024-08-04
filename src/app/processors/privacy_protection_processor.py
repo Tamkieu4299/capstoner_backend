@@ -5,6 +5,8 @@ from app.models.student_answer_model import StudentAnswer
 from app.crud.student_answer_crud import CRUDStudenAnswer
 from app.models.removed_word_model import RemovedWords
 from app.crud.removed_word_crud import CRUDRemovedWord
+from app.crud.assignment_crud import CRUDAssignment
+from app.models.assignment_model import Assignment
 import flair
 import re
 
@@ -14,6 +16,7 @@ print(flair.cache_root)
 tagger = SequenceTagger.load("ner")
 sa_crud = CRUDStudenAnswer(StudentAnswer)
 rw_crud = CRUDRemovedWord(RemovedWords)
+asm_crud = CRUDAssignment(Assignment)
 
 # Function to detect sensitive information using regex and Flair NER
 def detect_sensitive_info(text):
@@ -59,3 +62,4 @@ async def privacy_protection_processor(assignment_id):
                 })
             sa_crud.update(sa.id, {"protected_answer": rm_text}, db)
             await rw_crud.bulk_create(bulk_data, db)
+        asm_crud.update(assignment_id, {"sensitive_rmv_status": True}, db)

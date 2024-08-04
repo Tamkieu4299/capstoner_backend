@@ -35,14 +35,14 @@ rm_crud = CRUDRemovedWord(RemovedWords)
 redis_conn = Redis(host='redis-internal', port=6379)
 queue = Queue('default', connection=redis_conn)
 
-@router.post("/auto-grader", status_code=status.HTTP_201_CREATED)
+@router.post("/auto-grader/{assignment_id}", status_code=status.HTTP_201_CREATED)
 async def auto_grader(
-    student_answer_data: StudentAnswerRegisterSchema,
+    assignment_id: int,
     db: Session = Depends(get_db),
     # current_user=Depends(get_current_active_user),
 ):
     
-    queue.enqueue(auto_evaluation_processor, student_answer_data.assignment_id)
+    queue.enqueue(auto_evaluation_processor, assignment_id)
     return "Successfully sent to queue"
 
 @router.post("/privacy-protection/{assignment_id}", status_code=status.HTTP_201_CREATED)

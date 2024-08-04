@@ -146,7 +146,7 @@ Total Score: 20/25"""
             current_student_name = sa.student_name
             accumulate_ids.append(sa.id)
             processed += sa.protected_answer + "\n"
-
+    asm_crud.update(asm_id, {"evaluation_status": True}, db)
 
 """
 
