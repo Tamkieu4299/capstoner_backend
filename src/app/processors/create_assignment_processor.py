@@ -6,13 +6,18 @@ from app.crud.student_answer_crud import CRUDStudenAnswer
 from app.constants.config import Settings
 from ..utils import s3_driver, common
 from charset_normalizer import from_bytes
+import pymupdf  # imports the pymupdf library
+import fitz
 
 settings = Settings()
 
 sa_crud = CRUDStudenAnswer(StudentAnswer)
 asm_crud = CRUDAssignment(Assignment)
 
-def detect_and_decode(data):
+def detect_and_decode(data, is_pdf = False):
+    if is_pdf:
+        print("hereeeeeee")
+        return data, "pdf"
     result = from_bytes(data).best()
     encoding = result.encoding
     return data.decode(encoding), encoding
@@ -47,6 +52,20 @@ def count_questions(question_data):
 
     return question_count
 
+def read_file_content(file_name, extracted_file):
+    # Check the file extension
+    if file_name.endswith('.txt'):
+        return extracted_file.read() # Assuming text files are UTF-8 encoded
+    elif file_name.endswith('.pdf'):
+        # Use PyMuPDF to read the content from a PDF
+        with fitz.open(stream=extracted_file.read()) as doc:
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            return text
+    else:
+        print(f"Unsupported file type: {file_name}")
+    
 async def create_assignment_processor(assignment_data, student_file_upload, student_file_zip, question_file, criteria_file):
     sessionmaker = settings.psql_factory.create_sessionmaker()
     with sessionmaker() as db:
@@ -71,17 +90,17 @@ async def create_assignment_processor(assignment_data, student_file_upload, stud
         
         with zipfile.ZipFile(student_file_zip, 'r') as zip_ref:
             for file_name in zip_ref.namelist():
+                # Skip files in the __MACOSX directory and skip the 'demo 2/' directory itself
+                if file_name.startswith('__MACOSX/') or file_name == 'demo 2/':
+                    continue
                 with zip_ref.open(file_name) as extracted_file:
                     student_name, question_title = common.extract_student_info(file_name)
-                    print("Extract infoooooooooo")
-                    print(file_name)
-                    print(student_name, question_title)
-                    file_data = extracted_file.read()
+                    file_data = read_file_content(file_name, extracted_file)
                     if not file_data:
                         print(f"File {file_name} is empty, skipping.")
                         continue
                     try:
-                        student_answer, encoding = detect_and_decode(file_data)
+                        student_answer, encoding = detect_and_decode(file_data, bool("pdf" in file_name))
                         print(f"Detected encoding for {file_name}: {encoding}")
                         sa_dict = {
                             "student_name": student_name,

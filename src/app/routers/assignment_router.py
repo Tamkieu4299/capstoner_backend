@@ -16,6 +16,8 @@ from redis import Redis
 from ..processors.create_assignment_processor import create_assignment_processor
 from ..secret import get_current_active_user
 from io import BytesIO
+import fitz
+import zipfile
 
 logger = setup_logger(__name__)
 
@@ -77,3 +79,33 @@ async def get_assignment(
     assignments = assignment_crud.read_by_course_id(course_id, db)
     logger.info(f"Number of assignments: {len(assignments)}")
     return assignments
+
+@router.post("/read")
+async def read(
+    student_answers_file: UploadFile = File(...),
+):
+    student_answers_file_bytes = await student_answers_file.read()
+    file = BytesIO(student_answers_file_bytes)
+
+    def read_file_content(file_name, extracted_file):
+        # Check the file extension
+        if file_name.endswith('.txt'):
+            return extracted_file.read() # Assuming text files are UTF-8 encoded
+        elif file_name.endswith('.pdf'):
+            # Use PyMuPDF to read the content from a PDF
+            with fitz.open(stream=extracted_file.read()) as doc:
+                text = ""
+                for page in doc:
+                    text += page.get_text()
+                print(text)
+                return text
+        else:
+            print(f"Unsupported file type: {file_name}")
+    
+    with zipfile.ZipFile(file, 'r') as zip_ref:
+        for file_name in zip_ref.namelist():
+            # Skip files in the __MACOSX directory and skip the 'demo 2/' directory itself
+            if file_name.startswith('__MACOSX/') or file_name == 'demo 2/':
+                continue
+            with zip_ref.open(file_name) as extracted_file:
+                file_data = read_file_content(file_name, extracted_file)    
