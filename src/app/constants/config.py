@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from functools import lru_cache
 from ..psql import PSQLFactory
 
@@ -23,15 +23,16 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str
     IMAGE_BUCKET: str
     DEFAULT_REGION: str
-    REDIS_HOST = str
-    REDIS_PORT = str
-    AZURE_ENDPOINT= str
-    AZURE_API_KEY = str
-    AZURE_API_VERSION= str
-    GPT4_AZURE_ENDPOINT= str
-    GPT4_AZURE_API_KEY = str
-    GPT4_AZURE_API_VERSION= str
-    # REDIS_SSL = getattr(settings, 'REDIS_SSL', False)
+    REDIS_HOST : str
+    REDIS_PORT : str
+    AZURE_ENDPOINT: str
+    AZURE_API_KEY : str
+    AZURE_API_VERSION: str
+    GPT4_AZURE_ENDPOINT: str
+    GPT4_AZURE_API_KEY : str
+    GPT4_AZURE_API_VERSION: str
+    # REDIS_SSL : getattr(settings, 'REDIS_SSL', False)
+    GROQ_API_KEY: str
 
     @property
     def psql_factory(self) -> PSQLFactory:

@@ -1,3 +1,4 @@
+import os
 import zipfile
 from app.models.assignment_model import Assignment
 from app.models.student_answer_model import StudentAnswer

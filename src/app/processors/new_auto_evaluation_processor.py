@@ -1,0 +1,423 @@
+import zipfile
+from app.models.user_model import User
+from app.models.question_model import Question
+from app.models.assignment_model import Assignment
+from app.crud.student_answer_crud import CRUDStudenAnswer
+from app.crud.question_crud import CRUDQuestion
+from app.crud.assignment_crud import CRUDAssignment
+from app.models.student_answer_model import StudentAnswer
+from ..utils import common, s3_driver
+from app.constants.config import Settings
+import re
+import os
+from langchain_groq import ChatGroq
+from crewai import Crew, Agent, Task, Process
+
+settings = Settings()
+
+sa_crud = CRUDStudenAnswer(StudentAnswer)
+asm_crud = CRUDAssignment(Assignment)
+
+question_crud = CRUDQuestion(Question)
+
+MARKING_INSTRUCTION = "This is an assignment in which the students have to solve the question issue with the language programing C. Please tests the student's work carefully, including more complex or edge cases (by running the program and testing with some inputs, while checking the outputs), and provides detailed feedback and a suggested score based on the total score of the question. The feedback avoids phrases like 'penalty' or 'deduction' and uses inclusive language like 'we need/should' instead of 'the student needs/should'. Feedback is structured into a detailed result for each criterion, highlighting strengths and areas for improvement, and a shortly summary result that briefly reiterates the key points, using 1-2 examples for similar issues. The GPT Continuously learns from adjustments made by the user in scoring to suggest better scores for subsequent students, maintaining a formal and educational approach"
+EXAMPLE_MARKING = """
+Example output for a student who has perfectly completed 3 out of 3 questions from the assignment:
+**Question 1:**
+Feedback:
+-Undeniably excellent and perfect work
+Score: 8/8 \n\n
+**Question 2:**
+Feedback:
+-Undeniably excellent and perfect work
+Score: 8/8 \n\n
+**Question 3:**
+Feedback:
+-Undeniably excellent and perfect work. 
+Score: 9/9
+
+Example output for a student who has given answer to 2 out of 3 questions from the assignment:
+**Question 1:**
+Feedback:
+-The program provide correct output. However, ...
+Score: 7/8 \n\n
+**Question 2:**
+Feedback:
+-No Submission. You should try all questions to get attempt score, even the works may not be completed \n
+Score: 0/8 \n\n
+**Question 3:**
+Feedback:
+-The program contains syntax errors that prevent it from compiling and functioning. 
+-There's a stray semicolon after the for loop declaration for (int row=1; row <= num; row++); which breaks the loop’s intended scope. 
+-The increment syntax in the second inner loop for (int col = 1; col <= row; col+=){ is incomplete, lacking the increment amount. 
+-The intended pattern seems to be a mirrored number pattern based on the input, but due to the syntax errors, the logic cannot be executed to verify its correctness. 
+Score: 2/9
+
+Example output for a student who has given answer to 3 out of 3 questions from the assignment:
+**Question 1:**
+Feedback:
+-Very Good.
+-Code style: minor issue. There should be a blank line between code sections
+Score: 7.5/8 \n\n
+**Question 2:**
+Feedback:
+-The program only provides correct output for the first inputted number, but wrong outputs for the following numbers.
+-Error: the sum should be reset to 0 each time.
+-Note: the program should be tested carefully with different input values.
+Score: 6/8 \n\n
+**Question 3:**
+Feedback:
+-The output pattern is correct. Very Good!!
+-Code style: should be improved. Many statements are not properly aligned. The statements after if clause and else clause should be placed in a new line.
+-Efficiency: the first line can be combined with the following lines. In addition, we don't really need to use string (array of char) in this question.
+Score: 7.5/9 
+
+Example output for a student who has given answer to 3 out of 3 questions from the assignment:
+**Question 1:** 
+Feedback:
+-The program provide correct output. However, for efficiency, all three conditions for the YES cases should be combined together (shorter program).\n
+-Code style: there should be some comments to explain for the code and the return statement at the end should be indented (TAB in).\n
+Score: 7.5/8 \n\n
+**Question 2:**
+Feedback:
+-The program does not work properly as in the requirement. It should run continously with even numbers, and print out the sum of all even values from 0 to the inputted value as in the sample run.
+Score: 3.5/8 \n\n
+**Question 3:**
+Feedback:
+-Incomplete work. Some score for the initial attempt.
+Score: 1.5/9
+
+"""
+
+GROQ_LLM = ChatGroq(
+    api_key=settings.GROQ_API_KEY, model="llama-3.1-70b-versatile"
+)
+
+
+def auto_eva_assistant():
+    return Agent(
+        role="AI ASSISTANT",
+        goal="""Evaluate student submission works based on rubric, marking instructions, and questions of an assignment logically.
+        student_submission_work - each file contains a student's answer to an assignment question, with sensitive data removed to ensure the student's benefit.
+        assignment_questions - a file contains the assignment details and requirements for students to solve. Score may be included in the questions for students to qualify the importance of the questions.
+        rubric - a file that contains criteria for lecturers to use as a basis for evaluating student work.
+        marking_instruction - provided directly by the lecturers to guide you on how to mark a student's work, especially when certain aspects of the assignment may not be clearly covered in the rubric. This will help you provide the most appropriate feedback and score for the student's answers.
+
+        If the marking instructions contain any conflicting information or guidelines compared to the rubric, please disregard them.
+        The rubric is the priority standard that must be followed when evaluating student work.
+        """,
+        backstory="""You are an excellent teaching assistant in the IT and software engineering programs at RMIT University who enhances the accuracy and consistency of marking. You ensure that the assessment marking process is both efficient and devoid of biases.""",
+        llm=GROQ_LLM,
+        verbose=True,
+        allow_delegation=False,
+        max_iter=5,
+    )
+    
+
+def re_eva_assistant():
+    return Agent(
+        role="RE_EVA ASSISTANT",
+        goal="""Collate the generated evaluation of the student work with the assignment questions and rubric to see if it has been evaluated correctly or not. 
+        If not, re-evaluate the student submission work based on the instructions and feedback of the lecturers on the generated evaluation.
+        student_submission_work - each file contains a student's answer to an assignment question, with sensitive data removed to ensure the student's benefit.
+        assignment_questions - a file contains the assignment details and requirements for students to solve. Score may be included in the questions for students to qualify the importance of the questions.
+        rubric - a file that contains criteria for lecturers to use as a basis for evaluating student work.
+        generate_evaluation - an evaluation from the AI ASSISTANT on a student submission work based on rubric, marking instructions, and questions of an assignment logically.
+        remarking_instruction - direct feedback or instructions on the generated evaluation, providing guidance for the re-evaluation process.
+        """,
+        backstory="""You are an excellent teaching assistant in the IT and software engineering programs at RMIT University who enhances the accuracy and consistency of marking. 
+        You ensure that the assessment and marking process is both efficient and devoid of biases by checking the evaluated work again to see if it is accurate according to the rubric and assignment question requirements.
+        """,
+        llm=GROQ_LLM,
+        verbose=True,
+        allow_delegation=False,
+        max_iter=5,
+    )
+
+
+# Define tasks with descriptions and expected outputs
+def Evaluation(
+    student_submission_work,
+    assignment_questions,
+    rubric,
+    marking_instruction=MARKING_INSTRUCTION,
+    example_marking=EXAMPLE_MARKING,
+):
+    return Task(
+        description=f"""Giving feedback and a score for each question that is answered by the student in the submission work file based on the rubric and marking instruction.
+        {student_submission_work} - each file contains a student's answer to an assignment question, with sensitive data removed to ensure the student's benefit. \
+        {assignment_questions} - a file contains the assignment details and requirements for students to solve. Score may be included in the questions for students to qualify the importance of the questions. \
+        {rubric} - a file that contains criteria for lecturers to use as a basis for evaluating student work. \
+        {marking_instruction} - provided directly by the lecturers to guide you on how to mark a student's work, especially when certain aspects of the assignment may not be clearly covered in the rubric. This will help you provide the most appropriate feedback and score for the student's answers." \
+        If a student misses an answer or submits incomplete work, provide appropriate feedback and score accordingly.
+        Please do not add any information to their work; base your evaluation strictly on what has been submitted.
+        Return the evaluation for the student work will follow the format in these example {example_marking}  """,
+        expected_output="""An evaluation of a student's work should include feedback and a score for each question the student has answered.
+        Every produced answer should be consistent following format and with the following examples in the 'Example Marking':
+        
+        Example output for a student who has given answer to n out of n questions from the assignment:
+        **Question 1:**
+        Feedback:
+        - ... 
+        - ... 
+        - ... 
+        Score: ... \n\n
+        ...
+        **Question n:** 
+        Feedback:
+        - ... 
+        - ... 
+        - ... 
+        Score: ... \n\n
+        """,
+        agent=auto_eva_assistant(),
+    )
+
+def Re_Evaluation(
+    student_submission_work,
+    assignment_questions,
+    rubric,
+    generate_evaluation,
+    remarking_instruction,
+    example_marking,
+):
+    return Task(
+        description=f"""Re-generate feedback and scores for each student submission that has been reviewed by the lecturers, especially if the lecturers feel the work was not evaluated properly.
+        The re-evaluated feedback and scores should be based on the assignment requirements and rubric. Additionally, you should learn from the feedback and follow the lecturer’s remarking instructions for the re-evaluation.
+        {student_submission_work} - each file contains a student's answer to an assignment question, with sensitive data removed to ensure the student's benefit.
+        {assignment_questions} - a file contains the assignment details and requirements for students to solve. Score may be included in the questions for students to qualify the importance of the questions.
+        {rubric} - a file that contains criteria for lecturers to use as a basis for evaluating student work.
+        {generate_evaluation} - an evaluation from the AI ASSISTANT on a student submission work based on rubric, marking instructions, and questions of an assignment logically.
+        {remarking_instruction} - direct feedback or instructions on the generated evaluation, providing guidance for the re-evaluation process.
+        Your re-evaluation is strictly based on the original work. If a student misses an answer or submits incomplete work, provide appropriate feedback and score accordingly.
+        Please do not add any information to the student's work; base your evaluation strictly on what has been submitted.
+        Return the evaluation for the student work in the format of these examples: {example_marking}.""",
+        expected_output="""An evaluation of a student's work should include feedback and a score for each question the student has answered.
+        Every produced answer should be consistent following format and with the following examples in the 'Example Marking':
+        
+        Example output for a student who has given answer to n out of n questions from the assignment:
+        **Question 1:**
+        Feedback:
+        - ... 
+        - ... 
+        - ... 
+        Score: ... \n\n
+        ...
+        **Question n:** 
+        Feedback:
+        - ... 
+        - ... 
+        - ... 
+        Score: ... \n\n
+        """,
+        agent=re_eva_assistant(),
+    )
+
+def extract_score(text):
+    pattern = r"\d+/\d+"
+    match = re.search(pattern, text)
+    if match:
+        return match.group()
+    return None
+
+
+# async def get_content_after_question_title(text):
+#     pattern = r"(Question \d+)"
+
+#     parts = re.split(pattern, text)
+
+#     result = []
+
+#     for i in range(1, len(parts), 2):
+#         question_content = parts[i + 1].strip()
+#         result.append(question_content)
+#     return result
+
+
+# async def bulk_create_result(ids, result, db):
+#     res = await get_content_after_question_title(result)
+#     print("get_content_after_question_title")
+#     print(res)
+#     payload = []
+
+#     for i in range(len(ids)):
+#         score = extract_score(res[i])
+#         item = {"id": ids[i], "result": res[i], "score": score}
+#         print(item)
+#         payload.append(item)
+
+#     sa_crud.bulk_update(payload, db)
+async def get_content_after_question_title(text):
+    pattern = r"(Question \d+:)"
+    parts = re.split(pattern, text)
+
+    result = []
+    # Loop through the parts, skipping the question title and keeping only content
+    for i in range(1, len(parts), 2):  # Start at index 1 and step by 2 to skip titles
+        if i + 1 < len(parts):  # Ensure there's content after the title
+            question_content = parts[i + 1].strip()
+            result.append(question_content)
+        else:
+            # If there's no content after the title, append an empty string
+            result.append("")
+
+    return result
+
+async def bulk_create_result(ids, result, db):
+    res = await get_content_after_question_title(result)
+    print("get_content_after_question_title")
+    print(res)
+
+    payload = []
+    # Ensure no index out of range by limiting loop to the available data
+    for i in range(min(len(ids), len(res))):
+        score = extract_score(res[i])  # Extract score from question content
+        item = {"id": ids[i], "result": res[i], "score": score}
+        print("itemmmmmm")
+        print(item)
+        payload.append(item)
+
+    sa_crud.bulk_update(payload, db)
+
+def remove_comments(code: str) -> str:
+    # Regex patterns for comments in C/C++ and Python
+    single_line_comment_pattern = r"^\s*(#|//).*"
+    multi_line_comment_start_pattern = r"/\*"
+    multi_line_comment_end_pattern = r"\*/"
+
+    lines = code.splitlines()
+    result = []
+    in_multiline_comment = False
+
+    for line in lines:
+        # Check for single-line comments and ignore them
+        if re.match(single_line_comment_pattern, line):
+            continue
+
+        # Check for start of a multi-line comment
+        elif re.search(multi_line_comment_start_pattern, line):
+            in_multiline_comment = True
+            continue
+
+        # Skip lines inside a multi-line comment block
+        elif in_multiline_comment:
+            if re.search(multi_line_comment_end_pattern, line):
+                in_multiline_comment = False
+            continue
+
+        # Add non-comment lines to the result
+        result.append(line)
+
+    return "\n".join(result)
+
+
+def extract_comments(code: str) -> str:
+    # Regex patterns for comments in C/C++ and Python
+    single_line_comment_pattern = r"^\s*(#|//).*"
+    multi_line_comment_start_pattern = r"/\*"
+    multi_line_comment_end_pattern = r"\*/"
+
+    lines = code.splitlines()
+    result = []
+    in_multiline_comment = False
+
+    for line in lines:
+        # Check for single-line comments
+        if re.match(single_line_comment_pattern, line):
+            result.append(line)
+
+        # Check for start of multiline comment
+        elif re.search(multi_line_comment_start_pattern, line):
+            in_multiline_comment = True
+            result.append(line)
+
+        # Inside a multiline comment block
+        elif in_multiline_comment:
+            result.append(line)
+            if re.search(multi_line_comment_end_pattern, line):
+                in_multiline_comment = False
+
+    return "\n".join(result)
+
+
+def format_student_answer(student_answers):
+    res = ""
+    cnt_question = 1
+
+    if len(student_answers) <= 1:
+        return student_answers[0]
+
+    # res += extract_comments(student_answers[0]) + "\n"
+    for sa in student_answers:
+        print("saaaa")
+        print(sa)
+        res += f"Question {cnt_question}" + "\n"
+        # res += remove_comments(sa)
+        res += sa
+        cnt_question += 1
+        res += "\n"
+    return res
+
+
+async def auto_evaluation_processor(asm_id):
+    sessionmaker = settings.psql_factory.create_sessionmaker()
+    with sessionmaker() as db:
+        asm = asm_crud.read(asm_id, db)
+        marking_criteria = s3_driver.get_file(asm.marking_criteria_filepath)
+        question_content = s3_driver.get_file(asm.questions_filepath)
+
+        sas = sa_crud.read_by_assignment_id_sort_by_student_name(asm_id, db)
+        current_student_name = None
+        processed = []
+        accumulate_ids = []
+
+        for ind, sa in enumerate(sas):
+            if (
+                current_student_name
+                and sa.student_name != current_student_name
+            ) or ind == len(sas) - 1:
+
+                if ind == len(sas) - 1:
+                    accumulate_ids.append(sa.id)
+                    processed.append(sa.protected_answer)
+                try:
+                    print("procesedddddd")
+                    print(processed)
+                    combined_sa = format_student_answer(processed)
+                    print("combined_saaaa")
+                    print(combined_sa)
+                    task = Evaluation(
+                        student_submission_work=combined_sa,
+                        assignment_questions=question_content,
+                        rubric=marking_criteria,
+                    )
+
+                    crew = Crew(
+                        agents=[auto_eva_assistant()],
+                        tasks=[task],
+                        verbose=False,
+                        process=Process.sequential,
+                        share_crew=False,
+                    )
+    
+                    # Kick off the crew's work and collect the results
+                    results = crew.kickoff()
+                    
+                    # Convert the CrewOutput to string (assuming results object supports str or repr methods)
+                    results_str = str(results)  # or repr(results) if you need more detailed output
+                    print(results_str)
+                    print("==========================")
+                    await bulk_create_result(
+                        accumulate_ids,
+                        results_str,
+                        db,
+                    )
+                except Exception as err:
+                    print(err)
+                accumulate_ids = []
+                processed = []
+
+            current_student_name = sa.student_name
+            accumulate_ids.append(sa.id)
+            processed.append(sa.protected_answer)
+    asm_crud.update(asm_id, {"evaluation_status": True}, db)

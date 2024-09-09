@@ -20,7 +20,7 @@ from io import BytesIO
 import zipfile
 from rq import Queue
 from redis import Redis
-from app.processors.auto_evaluation_processor import auto_evaluation_processor
+from app.processors.new_auto_evaluation_processor import auto_evaluation_processor
 from app.processors.privacy_protection_processor import privacy_protection_processor
 import re
 logger = setup_logger(__name__)

@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session
 from ..utils import s3_driver
 from rq import Queue
 from redis import Redis
-from ..processors.create_assignment_processor import create_assignment_processor
-from ..secret import get_current_active_user
+from app.processors.create_assignment_processor import create_assignment_processor
+from app.secret import get_current_active_user
 from io import BytesIO
 import fitz
 import zipfile
@@ -35,7 +35,9 @@ queue = Queue('default', connection=redis_conn)
     # response_model=AssignmentRegisterSchema,
 )
 async def register_assignment(
-    assignment_data: AssignmentRegisterSchema = Form(...),
+    # assignment_data: AssignmentRegisterSchema = Form(...),
+    course_id: int= Form(...),
+    name: str = Form(...),
     student_answers_file: UploadFile = File(...),
     questions_file: UploadFile = File(...),
     criteria_file: UploadFile = File(...),
@@ -43,7 +45,10 @@ async def register_assignment(
 ):  
     student_answers_file_bytes = await student_answers_file.read()
     student_answers_zip = BytesIO(student_answers_file_bytes)
-
+    assignment_data = {
+        "course_id": course_id,
+        "name": name
+    }
     queue.enqueue(create_assignment_processor, assignment_data, student_answers_file, student_answers_zip, questions_file, criteria_file)
     return "Successfully sent to queue"
 
